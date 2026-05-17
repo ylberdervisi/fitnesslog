@@ -1,31 +1,28 @@
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+
+import ExercisesScreen from './src/screens/ExercisesScreen';
+import LogWorkoutScreen from './src/screens/LogWorkoutScreen';
+import HistoryScreen from './src/screens/HistoryScreen';
+
+const Tab = createBottomTabNavigator();
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>FITNESSLOG</Text>
-      <Text style={styles.subTitle}>Bygget av Ylber Dervisi</Text>
-      <Text>{new Date().toLocaleDateString('nb-NO', {day: 'numeric', month: 'long', year: 'numeric'})}</Text>
+    <NavigationContainer>
+      <Tab.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: '#fff' },
+          tabBarActiveTintColor: '#1a3a5c',
+          tabBarInactiveTintColor: '#888',
+        }}
+      >
+        <Tab.Screen name="Øvelser" component={ExercisesScreen} />
+        <Tab.Screen name="Logg økt" component={LogWorkoutScreen} />
+        <Tab.Screen name="Historikk" component={HistoryScreen} />
+      </Tab.Navigator>
       <StatusBar style="auto" />
-    </View>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    color: '#000',
-    fontSize: 25,
-
-  },
-  subTitle: {
-    color: '#2d2d2dff',
-    fontSize: 15
-  }
-});
