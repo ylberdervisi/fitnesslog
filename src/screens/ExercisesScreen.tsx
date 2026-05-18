@@ -9,12 +9,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-
-type Exercise = {
-  id: string;
-  name: string;
-  muscleGroup: string;
-};
+import ExerciseRow from '../components/ExerciseRow';
+import { Exercise } from '../types';
 
 const INITIAL_EXERCISES: Exercise[] = [
   { id: '1', name: 'Knebøy', muscleGroup: 'Bein' },
@@ -34,6 +30,7 @@ export default function ExercisesScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [muscleGroupInput, setMuscleGroupInput] = useState('');
+  const [search, setSearch] = useState('');
 
   function handleSave() {
     // TODO:
@@ -68,6 +65,10 @@ export default function ExercisesScreen() {
     setModalVisible(false);
   }
 
+  const filteredExercises = exercises.filter((exercise) =>
+  exercise.name.toLowerCase().includes(search.toLowerCase())
+);
+
   return (
     <View style={styles.container}>
       <Pressable
@@ -77,14 +78,19 @@ export default function ExercisesScreen() {
         <Text style={styles.addButtonText}>+ Legg til øvelse</Text>
       </Pressable>
 
+      <TextInput 
+        style=""
+        placeholder='Søk etter øvelse...'
+        value={search}
+        onChangeText={setSearch}
+      />
+
       <FlatList
-        data={exercises}
+        data={filteredExercises}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Text style={styles.exerciseName}>{item.name}</Text>
-            <Text style={styles.muscleGroup}>{item.muscleGroup}</Text>
-          </View>
+          <ExerciseRow exercise={item} />
+
         )}
       />
 
@@ -140,6 +146,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    marginHorizontal: 16,
+    marginBottom: 8
   },
   row: {
     paddingVertical: 14,
