@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  Alert,
   Button,
   FlatList,
   Modal,
@@ -65,6 +66,24 @@ export default function ExercisesScreen() {
     setModalVisible(false);
   }
 
+  function handleDelete(id: string) {
+  const exercise = exercises.find((e) => e.id === id);
+  if (!exercise) return;
+
+  Alert.alert(
+    'Slett øvelse?',
+    `Er du sikker på at du vil slette "${exercise.name}"?`,
+    [
+      { text: 'Avbryt', style: 'cancel' },
+      {
+        text: 'Slett',
+        style: 'destructive',
+        onPress: () => setExercises(exercises.filter((e) => e.id !== id)),
+      },
+    ]
+  );
+}
+
   const filteredExercises = exercises.filter((exercise) =>
   exercise.name.toLowerCase().includes(search.toLowerCase())
 );
@@ -89,7 +108,7 @@ export default function ExercisesScreen() {
         data={filteredExercises}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <ExerciseRow exercise={item} />
+          <ExerciseRow exercise={item} onDelete={handleDelete} />
 
         )}
       />
