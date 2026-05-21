@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Alert,
   Button,
@@ -10,54 +10,70 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSQLiteContext } from 'expo-sqlite';
 import ExerciseRow from '../components/ExerciseRow';
 import { Exercise } from '../types';
 
-const INITIAL_EXERCISES: Exercise[] = [
-  { id: '1', name: 'Knebøy', muscleGroup: 'Bein' },
-  { id: '2', name: 'Benkpress', muscleGroup: 'Bryst' },
-  { id: '3', name: 'Markløft', muscleGroup: 'Rygg' },
-  { id: '4', name: 'Skulderpress', muscleGroup: 'Skulder' },
-  { id: '5', name: 'Pull-ups', muscleGroup: 'Rygg' },
-  { id: '6', name: 'Bicep curl', muscleGroup: 'Armer' },
-  { id: '7', name: 'Tricep dips', muscleGroup: 'Armer' },
-  { id: '8', name: 'Utfall', muscleGroup: 'Bein' },
-  { id: '9', name: 'Rows', muscleGroup: 'Rygg' },
-  { id: '10', name: 'Planke', muscleGroup: 'Kjerne' },
-];
+// Rad-format fra SQL (snake_case) — mapppes til Exercise (camelCase) når vi leser.
+type ExerciseDbRow = {
+  id: string;
+  name: string;
+  muscle_group: string;
+};
 
 export default function ExercisesScreen() {
-  const [exercises, setExercises] = useState<Exercise[]>(INITIAL_EXERCISES);
+  const db = useSQLiteContext();
+
+  const [exercises, setExercises] = useState<Exercise[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [muscleGroupInput, setMuscleGroupInput] = useState('');
   const [search, setSearch] = useState('');
 
-  function handleSave() {
-    // TODO:
-    // 1. Hvis nameInput er tom (eller bare whitespace), returner uten å gjøre noe.
-    // 2. Lag et nytt Exercise-objekt med:
-    //      - id: Date.now().toString()
-    //      - name: nameInput.trim()
-    //      - muscleGroup: muscleGroupInput.trim() — hvis tomt, sett 'Annet'
-    // 3. Oppdater exercises-listen ved å legge til det nye objektet til SLUTTEN.
-    //    Husk: ikke muter — bruk spread-operatoren.
-    // 4. Tøm input-feltene (sett dem til tom string).
-    // 5. Lukk modalen.
-    if(!nameInput.trim()) {
-        return;
+  async function loadExercises() {
+    const rows = await db.getAllAsync<ExerciseDbRow>(
+      'SELECT id, name, muscle_group FROM exercises ORDER BY name'
+    );
+    setExercises(
+      rows.map((r) => ({ id: r.id, name: r.name, muscleGroup: r.muscle_group }))
+    );
+  }
+
+  useEffect(() => {
+    loadExercises(); 
+  }, [])
+
+  async function handleSave() {
+    if (!nameInput.trim()) {
+      return;
     }
 
-    const newExerciseGroup = {
+    const newExercise: Exercise = {
       id: Date.now().toString(),
       name: nameInput.trim(),
-      muscleGroup: muscleGroupInput.trim() !== '' ? muscleGroupInput.trim() : 'Annet'
-    }
+      muscleGroup: muscleGroupInput.trim() !== '' ? muscleGroupInput.trim() : 'Annet',
+    };
 
-    setExercises([...exercises, newExerciseGroup]);
-    setNameInput('')    
-    setMuscleGroupInput('')
-    setModalVisible(false)
+    // TODO (steg 3c):
+    // 1. Sett INSERT inn i databasen:
+    //      await db.runAsync(
+    //        'INSERT INTO exercises (id, name, muscle_group) VALUES (?, ?, ?)',
+    //        [newExercise.id, newExercise.name, newExercise.muscleGroup]
+    //      );
+    // 2. Last listen på nytt med await loadExercises() — så vi viser
+    //    nøyaktig det som er i databasen.
+    // 3. Tøm input-feltene og lukk modalen (som før).
+
+    await db.runAsync(
+      'INSERT INTO exercises (id, name, muscle_group) VALUES (?, ?, ?)',
+      [newExercise.id, newExercise.name, newExercise.muscleGroup]
+    );
+
+    await loadExercises();
+
+    setNameInput('');
+    setMuscleGroupInput('');
+    setModalVisible(false);
   }
 
   function handleCancel() {
@@ -67,22 +83,25 @@ export default function ExercisesScreen() {
   }
 
   function handleDelete(id: string) {
-  const exercise = exercises.find((e) => e.id === id);
-  if (!exercise) return;
+    const exercise = exercises.find((e) => e.id === id);
+    if (!exercise) return;
 
-  Alert.alert(
-    'Slett øvelse?',
-    `Er du sikker på at du vil slette "${exercise.name}"?`,
-    [
-      { text: 'Avbryt', style: 'cancel' },
-      {
-        text: 'Slett',
-        style: 'destructive',
-        onPress: () => setExercises(exercises.filter((e) => e.id !== id)),
-      },
-    ]
-  );
-}
+    Alert.alert(
+      'Slett øvelse?',
+      `Er du sikker på at du vil slette "${exercise.name}"?`,
+      [
+        { text: 'Avbryt', style: 'cancel' },
+        {
+          text: 'Slett',
+          style: 'destructive',
+          onPress: async () => {
+            await db.runAsync('DELETE FROM exercises WHERE id = ?', [id]);
+            await loadExercises();
+          },
+        },
+      ]
+    );
+  }
 
   const filteredExercises = exercises.filter((exercise) =>
   exercise.name.toLowerCase().includes(search.toLowerCase())
