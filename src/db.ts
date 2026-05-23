@@ -8,15 +8,25 @@ import type { SQLiteDatabase } from 'expo-sqlite';
  * og legger til nye steg etter hvert som skjemaet utvikler seg.
  */
 export async function migrateDb(db: SQLiteDatabase) {
-  const DATABASE_VERSION = 1;
+  const DATABASE_VERSION = 2;
 
   const result = await db.getFirstAsync<{ user_version: number }>(
     'PRAGMA user_version'
   );
   let currentVersion = result?.user_version ?? 0;
 
+
+  // Selv hvis versjonen er oppdatert, sjekk at v2-tabellene faktisk finnes.
+  // (Hvis en tidligere migrasjon feilet stille, kan versjonen være bumpet uten at
+  // tabellene ble opprettet.)
   if (currentVersion >= DATABASE_VERSION) {
-    return; // skjemaet er allerede oppdatert
+    const workoutsTable = await db.getFirstAsync<{ name: string }>(
+      `SELECT name FROM sqlite_master WHERE type='table' AND name='workouts'`
+    );
+    if (workoutsTable) {
+      return;
+    }
+    currentVersion = 1; // tving v1→v2 migrasjonen
   }
 
   if (currentVersion === 0) {
@@ -54,12 +64,27 @@ export async function migrateDb(db: SQLiteDatabase) {
     currentVersion = 1;
   }
 
-  // Når vi senere legger til nye tabeller (workouts, sets osv.) gjør vi:
-  //
-  // if (currentVersion === 1) {
-  //   await db.execAsync(`CREATE TABLE workouts (...);`);
-  //   currentVersion = 2;
-  // }
+  if (currentVersion === 1) {
+    // Legg til tabeller for treningsøkter og sett.
+    await db.execAsync(`
+      CREATE TABLE workouts (
+        id TEXT PRIMARY KEY NOT NULL,
+        created_at TEXT NOT NULL,
+        notes TEXT
+      );
+      CREATE TABLE workout_sets (
+        id TEXT PRIMARY KEY NOT NULL,
+        workout_id TEXT NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
+        exercise_id TEXT NOT NULL REFERENCES exercises(id),
+        weight REAL NOT NULL,
+        reps INTEGER NOT NULL,
+        set_order INTEGER NOT NULL
+      );
+      CREATE INDEX idx_workout_sets_workout ON workout_sets(workout_id);
+      CREATE INDEX idx_workout_sets_exercise ON workout_sets(exercise_id);
+    `);
+    currentVersion = 2;
+  }
 
   await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
 }
