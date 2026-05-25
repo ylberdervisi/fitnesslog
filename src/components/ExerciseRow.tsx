@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Exercise } from '../types';
+import * as Haptics from 'expo-haptics';
 
 type ExerciseRowProps = {
   exercise: Exercise;
@@ -11,7 +12,10 @@ export default function ExerciseRow({ exercise, onDelete }: ExerciseRowProps) {
   return (
     <Pressable
     delayLongPress={600}
-    onLongPress={() => onDelete(exercise.id)}
+    onLongPress={() => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      onDelete(exercise.id);
+    }}
       style={styles.row}
     >
       <Text style={styles.exerciseName}>{exercise.name}</Text>

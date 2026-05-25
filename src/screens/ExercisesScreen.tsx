@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import {
   Alert,
   Button,
@@ -34,6 +35,8 @@ export default function ExercisesScreen() {
     const rows = await db.getAllAsync<ExerciseDbRow>(
       'SELECT id, name, muscle_group FROM exercises ORDER BY name'
     );
+
+
     setExercises(
       rows.map((r) => ({ id: r.id, name: r.name, muscleGroup: r.muscle_group }))
     );
@@ -96,6 +99,7 @@ export default function ExercisesScreen() {
           style: 'destructive',
           onPress: async () => {
             await db.runAsync('DELETE FROM exercises WHERE id = ?', [id]);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
             await loadExercises();
           },
         },
@@ -117,11 +121,13 @@ export default function ExercisesScreen() {
       </Pressable>
 
       <TextInput 
-        style=""
+        style={styles.searchExerciseInput}
         placeholder='Søk etter øvelse...'
         value={search}
         onChangeText={setSearch}
       />
+
+      {exercises.length === 0 && <Text style={styles.emptyExercisesText}>Ingen øvelser er lagt til</Text>}
 
       <FlatList
         data={filteredExercises}
@@ -172,6 +178,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  emptyExercisesText: {
+    marginLeft: 20,
+    fontWeight: 600,
+    fontSize: 20
+  },
+  searchExerciseInput: {
+    padding: 10,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'lightgrey',
+
   },
   addButton: {
     backgroundColor: '#1a3a5c',

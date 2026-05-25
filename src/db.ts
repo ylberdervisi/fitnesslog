@@ -8,6 +8,11 @@ import type { SQLiteDatabase } from 'expo-sqlite';
  * og legger til nye steg etter hvert som skjemaet utvikler seg.
  */
 export async function migrateDb(db: SQLiteDatabase) {
+  // Slå på foreign key enforcement. SQLite har dette AV som default,
+  // og innstillingen er per connection — må kjøres hver gang DB åpnes.
+  // Uten dette virker ikke ON DELETE CASCADE på workout_sets.
+  await db.execAsync('PRAGMA foreign_keys = ON;');
+
   const DATABASE_VERSION = 2;
 
   const result = await db.getFirstAsync<{ user_version: number }>(

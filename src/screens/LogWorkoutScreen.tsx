@@ -49,6 +49,7 @@ export default function LogWorkoutScreen() {
       const rows = await db.getAllAsync<ExerciseDbRow>(
         'SELECT id, name, muscle_group FROM exercises ORDER BY name'
       );
+      
       setExercises(
         rows.map((r) => ({ id: r.id, name: r.name, muscleGroup: r.muscle_group }))
       );
@@ -73,6 +74,7 @@ export default function LogWorkoutScreen() {
     // 6. Tøm weight og reps-feltene (la selectedExerciseId stå — vanlig å legge til
     //    flere sett av samme øvelse etter hverandre).
     if(!selectedExerciseId || !weightInput.trim() || !repsInput.trim()) {
+      Alert.alert('Vekt/Reps må fylles ut');
       return;
     }
 
